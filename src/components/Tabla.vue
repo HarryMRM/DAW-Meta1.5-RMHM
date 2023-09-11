@@ -71,7 +71,6 @@
             </v-btn>
         </template>
     </v-data-table>
-
 </v-container>
 </template>
 
@@ -79,13 +78,19 @@
 
 
 
-
-
-
-
-
-
 <script setup>
+    /*
+    * Importaciones agregadas:
+    * ref: necesario para lograr inteconectar variables
+    * con la Composition API.
+    * watch: Permite llamar una funcion cuando algun elemento
+    * reactivo cambia.
+    * computed: Permite decidir con una funcion, como actuar
+    * con elementos reactivos para mostrar informacion
+    * condicional a estos.
+    * onMounted: Permite un despliege inicial seguro, con
+    * la informacion de la api.
+    */ 
     import { ref,watch,computed,onMounted } from 'vue';
     let posteos;
     let usuarios;
@@ -135,42 +140,43 @@
     
     //Funciones basicas para la tabla 
     function editItem(item) {
-        editedIndex.value = listaData.value.indexOf(item)
-        editedItem.value = Object.assign({}, item)
-        // console.log(editedIndex.value);
-        // console.log(item.id);
-        dialog.value = true
+        editedIndex.value = listaData.value.indexOf(item);
+        editedItem.value = Object.assign({}, item);
+        dialog.value = true;
     }
 
     function deleteItem(item) {
-        editedIndex.value = listaData.value.indexOf(item)
-        editedItem.value = Object.assign({}, item)
-        dialogDelete.value = true
+        editedIndex.value = listaData.value.indexOf(item);
+        editedItem.value = Object.assign({}, item);
+        dialogDelete.value = true;
     }
 
-    // Por como funciona, es facil conseguir el ID
-    // para pedir la solicitud de borrado al servidor.
+    /* 
+    * Por como funciona, es facil conseguir el ID
+    * para pedir la solicitud de borrado al servidor.
+    */ 
     async function deleteItemConfirm() {
         console.log(listaData.value[editedIndex.value].id);
         await fetch("https://jsonplaceholder.typicode.com/posts/" + listaData.value[editedIndex.value].id,
         {method: 'DELETE',}).catch(error => alert(error));
-        listaData.value.splice(editedIndex.value, 1)
-        posteos.splice(editedIndex.value, 1)
+        listaData.value.splice(editedIndex.value, 1);
+        posteos.splice(editedIndex.value, 1);
         closeDelete();
     }
 
     function close() {
-        dialog.value = false
-        editedItem.value = Object.assign({}, defaultItem.value)
-        editedIndex.value = -1
+        dialog.value = false;
+        editedItem.value = Object.assign({}, defaultItem.value);
+        editedIndex.value = -1;
     }
 
     function closeDelete() {
-        dialogDelete.value = false
-        editedItem.value = Object.assign({}, defaultItem.value)
-        editedIndex.value = -1
+        dialogDelete.value = false;
+        editedItem.value = Object.assign({}, defaultItem.value);
+        editedIndex.value = -1;
     }
 
+    // Identifica si el autor ya esta registrado.
     function getIdPorNombre(nombreBuscado){
         let i = 0;
         let encontrado = false;
@@ -185,9 +191,15 @@
         return id;
     }
 
-
+    /* 
+    * Esta funcion esta acondicionada para que se pueda aprovechar
+    * tanto para nuevos registros, como simples ediciones, en ambos
+    * casos se implementa un sistema de indentificacion para saber
+    * si se nececita realizar un fetch extra para registrar un autor
+    * mas a la base de datos.
+    */ 
     async function save() {
-        if (editedIndex.value > -1) {
+        if (editedIndex.value > -1) { //Es una edicion de un registro
             let idNombre = getIdPorNombre(editedItem.value.name);
             if (idNombre === -1){
                 fetch('https://jsonplaceholder.typicode.com/users', {
@@ -200,7 +212,7 @@
                     'Content-type': 'application/json; charset=UTF-8',
                 },
                 }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
-                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name})
+                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name});
             }
             fetch('https://jsonplaceholder.typicode.com/posts', {
                 method: 'PUT',
@@ -213,9 +225,10 @@
                 'Content-type': 'application/json; charset=UTF-8',
             },
             }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
-            Object.assign(listaData.value[editedIndex.value], editedItem.value)
-            Object.assign(posteos[editedIndex.value], editedItem.value)
-        } else {
+            Object.assign(listaData.value[editedIndex.value], editedItem.value);
+            Object.assign(posteos[editedIndex.value], editedItem.value);
+        } 
+        else { // Es un nuevo registro.
             let idNombre = getIdPorNombre(editedItem.value.name);
             if (idNombre === -1){
                 fetch('https://jsonplaceholder.typicode.com/users', {
@@ -228,7 +241,7 @@
                     'Content-type': 'application/json; charset=UTF-8',
                 },
                 }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
-                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name})
+                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name});
             }
             fetch('https://jsonplaceholder.typicode.com/posts', {
                 method: 'POST',
@@ -253,13 +266,17 @@
 
     watch(
         dialog,async(val) => {
-            val || close()
+            val || close();
         },
         dialogDelete,async(val) => {
-            val || closeDelete()
+            val || closeDelete();
         },
     )
 
+    /* 
+    * Funcion que recupera la informacion de la base de datos
+    * mediante una promesa.
+    */ 
     onMounted(async() => {
         await fetch("https://jsonplaceholder.typicode.com/users").then((response) => response.json()).then((json) => listaUsuario.value = JSON.stringify(json));
         await fetch("https://jsonplaceholder.typicode.com/posts").then((response) => response.json()).then((json) => listaPost.value = JSON.stringify(json));
@@ -278,6 +295,4 @@
         })
         Object.assign(listaData.value,posteos);
     })
-
-
 </script>
