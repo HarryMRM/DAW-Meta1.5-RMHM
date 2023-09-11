@@ -1,62 +1,283 @@
 <template>
 <v-container>
-    <v-row no-gutters>
-        <v-col>
-            <v-sheet class="pa-2 ma-2">
-                <!-- Incia la tabla -->
-                <v-table height="300px">
-                    <thead>
-                        <!-- Primera fila -->
-                        <tr>
-                            <th class="text-left">
-                                Autor
-                            </th>
-                            <th class="text-left">
-                                Titulo
-                            </th>
-                            <th class="text-left">
-                                Post
-                            </th>
-                        </tr>
-                    </thead>
-                    <!-- Insercion del cuerpo de la tabla desde -->
-                    <!-- el apartado de script setup -->
-                    <tbody>
-                        <tr v-for="datos in listaData" :key="datos.name">
-                            <td>{{ datos.nombre }}</td>
-                            <td>{{ datos.titulo }}</td>
-                            <td>{{ datos.post }}</td>
-                        </tr>
-                    </tbody>
-                </v-table>
-            </v-sheet>
-        </v-col>
-    </v-row>
+    <v-data-table :headers="headers" :items="listaData" class="elevation-1">
+        <template v-slot:top>
+            <v-toolbar flat>
+                <v-toolbar-title>My CRUD</v-toolbar-title>
+                <v-divider class="mx-4" inset vertical></v-divider>
+                <v-spacer></v-spacer>
+                <v-dialog v-model="dialog" max-width="500px">
+                    <template v-slot:activator="{ props }">
+                        <v-btn color="primary" dark class="mb-2" v-bind="props">
+                            New Item
+                        </v-btn>
+                    </template>
+                    <v-card>
+                        <v-card-title>
+                            <span class="text-h5">{{ formTitle }}</span>
+                        </v-card-title>
+
+                        <v-card-text>
+                            <v-container>
+                                <v-row>
+                                    <v-col cols="12" sm="6" md="4">
+                                        <v-text-field v-model="editedItem.nombre" label="Nombre"></v-text-field>
+                                    </v-col>
+                                    <v-col cols="12" sm="6" md="4">
+                                        <v-text-field v-model="editedItem.titulo" label="Titulo"></v-text-field>
+                                    </v-col>
+                                    <v-col cols="12" sm="6" md="4">
+                                        <v-text-field v-model="editedItem.post" label="Post"></v-text-field>
+                                    </v-col>
+                                </v-row>
+                            </v-container>
+                        </v-card-text>
+
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn color="blue-darken-1" variant="text" @click="close">
+                                Cancel
+                            </v-btn>
+                            <v-btn color="blue-darken-1" variant="text" @click="save">
+                                Save
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+                <v-dialog v-model="dialogDelete" max-width="500px">
+                    <v-card>
+                        <v-card-title class="text-h5">Are you sure you want to delete this item?</v-card-title>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn color="blue-darken-1" variant="text" @click="closeDelete()">Cancel</v-btn>
+                            <v-btn color="blue-darken-1" variant="text" @click="deleteItemConfirm()">OK</v-btn>
+                            <v-spacer></v-spacer>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+            </v-toolbar>
+        </template>
+        <template v-slot:item.actions="{ item }">
+            <v-icon size="small" class="me-2" @click="editItem(item.raw)">
+                mdi-pencil
+            </v-icon>
+            <v-icon size="small" @click="deleteItem(item.raw)">
+                mdi-delete
+            </v-icon>
+        </template>
+        <template v-slot:no-data>
+            <v-btn color="primary" @click="reset">
+                Reset
+            </v-btn>
+        </template>
+    </v-data-table>
+
 </v-container>
 </template>
 
+
+
+
+
+
+
+
+
+
+
 <script setup>
-    import { ref,onMounted } from 'vue';
+    import { ref,watch,computed,onMounted } from 'vue';
+    let posteos;
+    let usuarios;
     const listaUsuario = ref(null);
     const listaPost = ref(null);
     const listaData = ref([]);
-    // Es vital colocar la actualizacion de la tabla
-    // en metofo de onMounted para asegurar la carga
-    // de la pagina de manera correcta, funcion async.
+    const dialog = ref(false);
+    const dialogDelete = ref(false);
+    const headers = ref([
+        {
+            title: 'Nombre',
+            align: 'start',
+            sortable: false,
+            key: 'nombre',
+        },
+        {
+            title: 'Titulo',
+            key: 'titulo'
+        },
+        {
+            title: 'Post',
+            key: 'post'
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            sortable: false
+        },
+    ]);
+    const editedIndex = ref(-1);
+    const editedItem = ref({
+        id: 0,
+        nombre: "",
+        titulo: "",
+        post: "",
+    });
+    const defaultItem = ref({
+        id: 0,
+        nombre: "",
+        titulo: "",
+        post: "",
+    });
+
+    const formTitle = computed(() => {
+        return editedIndex.value === -1 ? 'New Item' : 'Edit Item'
+    })
+    
+    //Funciones basicas para la tabla 
+    function editItem(item) {
+        editedIndex.value = listaData.value.indexOf(item)
+        editedItem.value = Object.assign({}, item)
+        // console.log(editedIndex.value);
+        // console.log(item.id);
+        dialog.value = true
+    }
+
+    function deleteItem(item) {
+        editedIndex.value = listaData.value.indexOf(item)
+        editedItem.value = Object.assign({}, item)
+        dialogDelete.value = true
+    }
+
+    // Por como funciona, es facil conseguir el ID
+    // para pedir la solicitud de borrado al servidor.
+    async function deleteItemConfirm() {
+        console.log(listaData.value[editedIndex.value].id);
+        await fetch("https://jsonplaceholder.typicode.com/posts/" + listaData.value[editedIndex.value].id,
+        {method: 'DELETE',}).catch(error => alert(error));
+        listaData.value.splice(editedIndex.value, 1)
+        posteos.splice(editedIndex.value, 1)
+        closeDelete();
+    }
+
+    function close() {
+        dialog.value = false
+        editedItem.value = Object.assign({}, defaultItem.value)
+        editedIndex.value = -1
+    }
+
+    function closeDelete() {
+        dialogDelete.value = false
+        editedItem.value = Object.assign({}, defaultItem.value)
+        editedIndex.value = -1
+    }
+
+    function getIdPorNombre(nombreBuscado){
+        let i = 0;
+        let encontrado = false;
+        let id = -1;
+        do{
+            if(usuarios[i].name == nombreBuscado){
+                encontrado = true;
+                id = usuarios[i].id;
+            }
+            i++;
+        }while((i < usuarios.length) && (!encontrado));
+        return id;
+    }
+
+
+    async function save() {
+        if (editedIndex.value > -1) {
+            let idNombre = getIdPorNombre(editedItem.value.name);
+            if (idNombre === -1){
+                fetch('https://jsonplaceholder.typicode.com/users', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                    id: usuarios.length+1,
+                    name: editedItem.value.name,
+                }),
+                headers: {
+                    'Content-type': 'application/json; charset=UTF-8',
+                },
+                }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
+                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name})
+            }
+            fetch('https://jsonplaceholder.typicode.com/posts', {
+                method: 'PUT',
+                body: JSON.stringify({
+                title: editedItem.value.titulo,
+                body: editedItem.value.post,
+                userId: idNombre,
+            }),
+            headers: {
+                'Content-type': 'application/json; charset=UTF-8',
+            },
+            }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
+            Object.assign(listaData.value[editedIndex.value], editedItem.value)
+            Object.assign(posteos[editedIndex.value], editedItem.value)
+        } else {
+            let idNombre = getIdPorNombre(editedItem.value.name);
+            if (idNombre === -1){
+                fetch('https://jsonplaceholder.typicode.com/users', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                    id: usuarios.length+1,
+                    name: editedItem.value.name,
+                }),
+                headers: {
+                    'Content-type': 'application/json; charset=UTF-8',
+                },
+                }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
+                usuarios.push({id:usuarios.length+1 , name:editedItem.value.name})
+            }
+            fetch('https://jsonplaceholder.typicode.com/posts', {
+                method: 'POST',
+                body: JSON.stringify({
+                title: editedItem.value.titulo,
+                body: editedItem.value.post,
+                userId: idNombre,
+            }),
+            headers: {
+                'Content-type': 'application/json; charset=UTF-8',
+            },
+            }).then((response) => response.json()).then((json) => console.log(json)).catch(error => alert(error));
+            listaData.value.push(editedItem.value);
+            posteos.push(editedItem.value);
+        }
+        close();
+    }
+
+    function reset() {
+        Object.assign(listaData.value,posteos);
+    }
+
+    watch(
+        dialog,async(val) => {
+            val || close()
+        },
+        dialogDelete,async(val) => {
+            val || closeDelete()
+        },
+    )
+
     onMounted(async() => {
         await fetch("https://jsonplaceholder.typicode.com/users").then((response) => response.json()).then((json) => listaUsuario.value = JSON.stringify(json));
         await fetch("https://jsonplaceholder.typicode.com/posts").then((response) => response.json()).then((json) => listaPost.value = JSON.stringify(json));
-        const usuarios = JSON.parse(listaUsuario.value);
-        let posteos = JSON.parse(listaPost.value);
+        usuarios = JSON.parse(listaUsuario.value);
+        posteos = JSON.parse(listaPost.value);
         //Genera un array listo para colocar los datos en la tabla
         posteos = posteos.map(function(post){
             let nombre;
+            //Cambiare esto algun dia por un do while... 
+            //o un break (si es que existe en javascript).
             usuarios.forEach(usuario => {
                 if(usuario.id == post.userId)
                     nombre = usuario.name;
             });
-            return {nombre:nombre,titulo:post.title,post:post.body}
+            return {id:post.id,nombre:nombre,titulo:post.title,post:post.body};
         })
-        listaData.value = posteos; 
+        Object.assign(listaData.value,posteos);
     })
+
+
 </script>
