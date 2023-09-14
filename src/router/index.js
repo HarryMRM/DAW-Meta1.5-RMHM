@@ -16,6 +16,11 @@ const routes = [
         name: 'Tabla',
         component: () => import('@/views/TablaVista.vue'),
       },
+      {
+        path: 'Matriz',
+        name: 'Matriz',
+        component: () => import('@/views/MatrizCardsVista.vue'),
+      },
     ],
   },
 ]

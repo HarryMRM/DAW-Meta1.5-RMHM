@@ -18,5 +18,6 @@
 		{type: 'divider'},
 		{title: 'Home', value: 'inicio', props:{prependIcon:'mdi-view-dashboard', to:'/'}},
 		{title: 'Tabla', value: 'tabla', props:{prependIcon:'mdi-table', to:'/Tabla'}},
+		{title: 'Matriz', value: 'Matriz', props:{prependIcon:'mdi-table', to:'/Matriz'}},
 	]);
 </script>
